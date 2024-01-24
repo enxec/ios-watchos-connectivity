@@ -20,9 +20,9 @@ The Watch Connectivity framework provides APIs to do the following tasks:
 - Transfer files, view transfer progress, and manage the outstanding transfers.
 - Update current complications from iOS apps.
 
-The APIs all accept a dictionary and transfer it between apps but have notable differences. [`updateApplicationContext(_:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/1615621-updateapplicationcontext) sends a dictionary, which is typically a piece of app conext data, to the counterpart app and replaces the existing data if any.
- [`transferUserInfo(_:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/1615671-transferuserinfo) transfers a dictionary as well, but it ensures that the delivery happens. If an app transfers multiple dictionaries in a short interval, the system queues them up and deliver them in the same order. 
- [`sendMessage(_:replyHandler:errorHandler:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/1615687-sendmessage) sends a dictionary immediately and can return an error if the sending fails. 
+The APIs all accept a dictionary and transfer it between apps but have notable differences. [`updateApplicationContext(_:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/updateapplicationcontext(_:)) sends a dictionary, which is typically a piece of app conext data, to the counterpart app and replaces the existing data if any.
+ [`transferUserInfo(_:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/transferuserinfo(_:)) transfers a dictionary as well, but it ensures that the delivery happens. If an app transfers multiple dictionaries in a short interval, the system queues them up and deliver them in the same order. 
+ [`sendMessage(_:replyHandler:errorHandler:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/sendmessage(_:replyhandler:errorhandler:)) sends a dictionary immediately and can return an error if the sending fails. 
  
  When sending a message, apps can optionally provide a reply handler for receiving the counterpart's response. The reply handle runs asynchronously on a background thread and should return quickly to avoid time out. Sending a message from a watchOS app wakes up its paired iOS app if it's reachable.
 
@@ -33,7 +33,7 @@ To demonstrate current complication user information transfer, this sample provi
 3. Tap the tall body area, then rotate the digital crown to find the `SimpleWatchConnectivity` complication.
 4. Press the digital crown and tap the screen to go back and finish the configuration.
 
-To update the complication from the iOS app, this sample calls `transferCurrentComplicationUserInfo` on the iOS side if the complication is active. The system allows 50 transfers of this kind per day, and apps can use [`remainingComplicationUserInfoTransfers`](https://developer.apple.com/documentation/watchconnectivity/wcsession/1771700-remainingcomplicationuserinfotra) to retrieve the number of remaining times.
+To update the complication from the iOS app, this sample calls `transferCurrentComplicationUserInfo` on the iOS side if the complication is active. The system allows 50 transfers of this kind per day, and apps can use [`remainingComplicationUserInfoTransfers`](https://developer.apple.com/documentation/watchconnectivity/wcsession/remainingcomplicationuserinfotransfers) to retrieve the number of remaining times.
 
 ``` swift
 if WCSession.default.isComplicationEnabled {
@@ -58,7 +58,7 @@ Apps must complete `WKWatchConnectivityRefreshBackgroundTask`. Otherwise, tasks 
 
 - The app finishes handling the tasks.
 - The current `WCSession` turns to a state other than [`.activated`](https://developer.apple.com/documentation/watchconnectivity/wcsessionactivationstate/activated).
-- [`hasContentPending`](https://developer.apple.com/documentation/watchconnectivity/wcsession/1648961-hascontentpending) flips `false`, which indicates that there's no pending data (received prior to `WCSession` activation) waiting for processing.
+- [`hasContentPending`](https://developer.apple.com/documentation/watchconnectivity/wcsession/hascontentpending) flips `false`, which indicates that there's no pending data (received prior to `WCSession` activation) waiting for processing.
 
 The following code completes the tasks at the end of the [`handle(_:)`](https://developer.apple.com/documentation/watchkit/wkextensiondelegate/1650877-handle) method of the extension delegate.
 

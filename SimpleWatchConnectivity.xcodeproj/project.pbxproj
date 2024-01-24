@@ -226,7 +226,7 @@
 				D88A2A1442F9DEE76CB24A7A /* LICENSE.txt */,
 			);
 			name = LICENSE;
-			path = LICENSE;
+			path = .;
 			sourceTree = "<group>";
 		};
 		B6CCE5FF3493355C169F8933 /* Configuration */ = {
