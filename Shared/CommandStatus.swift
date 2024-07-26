@@ -39,8 +39,8 @@ struct TimedColor {
     var colorData: Data
     
     var color: UIColor {
-        let optional = ((try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [UIColor.self], from: colorData)) as Any??)
-        guard let color = optional as? UIColor else {
+        let uiColor = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [UIColor.self], from: colorData)
+        guard let color = uiColor as? UIColor else {
             fatalError("Failed to unarchive a UIClor object!")
         }
         return color
@@ -59,7 +59,7 @@ struct TimedColor {
     }
     
     init(_ timedColor: Data) {
-        let data = ((try? NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(timedColor)) as Any??)
+        let data = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSDictionary.self, NSString.self, NSData.self], from: timedColor)
         guard let dictionary = data as? [String: Any] else {
             fatalError("Failed to unarchive a timedColor dictionary!")
         }

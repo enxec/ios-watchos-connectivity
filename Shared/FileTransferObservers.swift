@@ -8,16 +8,23 @@ Manages the observation of the file transfer progress.
 import Foundation
 import WatchConnectivity
 
-// Manage the observation of file transfers.
-//
+@Observable
 class FileTransferObservers {
     
     // Hold the observations and file transfers.
     // The system removes KVO automatically after releasing the observations.
     //
-    private(set) var fileTransfers = [WCSessionFileTransfer]()
-    private var observations = [NSKeyValueObservation]()
+    private var fileTransferObervations = [WCSessionFileTransfer: NSKeyValueObservation]()
+    private(set) var progresssDescriptions = [WCSessionFileTransfer: String]()
+
+    private var observations: [NSKeyValueObservation] {
+        return Array(fileTransferObervations.values)
+    }
     
+    var fileTransfers: [WCSessionFileTransfer] {
+        return Array(fileTransferObervations.keys)
+    }
+
     // Invalidate all the observations.
     //
     deinit {
@@ -28,21 +35,39 @@ class FileTransferObservers {
     
     // Observe a file transfer, and hold the observation.
     //
-    func observe(_ fileTransfer: WCSessionFileTransfer, handler: @escaping (Progress) -> Void) {
+    func observe(_ fileTransfer: WCSessionFileTransfer, handler: ((Progress) -> Void)? = nil) {
+        progresssDescriptions[fileTransfer] = fileTransfer.progress.localizedDescription
         let observation = fileTransfer.progress.observe(\.fractionCompleted) { progress, _ in
-            handler(progress)
+            self.progresssDescriptions[fileTransfer] = progress.localizedDescription
+            handler?(progress)
         }
-        observations.append(observation)
-        fileTransfers.append(fileTransfer)
+        if let existingObservation = fileTransferObervations[fileTransfer] {
+            existingObservation.invalidate()
+        }
+        fileTransferObervations[fileTransfer] = observation
     }
     
     // Un-observe a file transfer, and invalidate the observation.
     //
     func unobserve(_ fileTransfer: WCSessionFileTransfer) {
-        guard let index = fileTransfers.firstIndex(of: fileTransfer) else { return }
-        let observation = observations.remove(at: index)
-        observation.invalidate()
-        fileTransfers.remove(at: index)
+        if let observation = fileTransferObervations[fileTransfer] {
+            observation.invalidate()
+            fileTransferObervations[fileTransfer] = nil
+        }
+        progresssDescriptions[fileTransfer] = nil
+    }
+    
+    func observe(_ fileTransfers: [WCSessionFileTransfer]) {
+        for fileTransfer in fileTransfers {
+            observe(fileTransfer)
+        }
+    }
+
+    func reset() {
+        observations.forEach { observation in
+            observation.invalidate()
+        }
+        fileTransferObervations = [:]
+        progresssDescriptions = [:]
     }
 }
-

@@ -1,66 +1,83 @@
-# Implementing Two-Way Communication Using Watch Connectivity
-Transfer data between a watchOS app and its paired iOS app to synchronize their states.
+# Transferring data with Watch Connectivity
+Transfer data between a watchOS app and its companion iOS app.
 
 ## Overview
-Some watch apps heavily rely on their paired iOS app to perform complicated calculations or present rich content, and need to exchange data with the iOS companion even when an internet connection is unavailable. The Watch Connectivity framework provides convenient APIs to implement two-way communication between paired apps. This sample shows the subtle differences between these APIs and demonstrates how to handle Watch Connectivity background tasks.
+Some watchOS apps rely on their companion iOS app to perform complicated tasks, and need to exchange data with the companion app even when there's no internet connection. The [Watch Connectivity](https://developer.apple.com/documentation/watchconnectivity) framework provides APIs for this purpose. This sample demonstrates how to use the APIs, and how to handle Watch Connectivity background tasks.
 
-## Configure the Sample Code Project
+> Important: Use a physical iPhone and Apple Watch to test this sample code project.
+
+## Configure the sample code project
 Before building the sample app, perform the following steps in Xcode:
-1. In the General pane of the `SimpleWatchConnectivity` target, update the Bundle Identifier field with a new identifier.
-2. In the Signing & Capabilities pane, select the applicable team from the Team drop-down menu to let Xcode automatically manage the provisioning profile. See [Assign a project to a team](https://help.apple.com/xcode/mac/current/#/dev23aab79b4) for details.
-3. Similarly, update the bundle identifier and developer team for the WatchKit app and WatchKit Extension targets. The bundle identifiers must be `<iOS app bundle identifier>.watchkitapp` and `<iOS app bundle identifier>.watchkitapp.watchkitextension`, respectively.
-4. Open the `Info.plist` file of the WatchKit app target and update the value of `WKCompanionAppBundleIdentifier` key with the new iOS app bundle identifier.
-5. Open the `Info.plist` file of the WatchKit Extension target and update the value of the `NSExtension > NSExtensionAttributes > WKAppBundleIdentifier` key with the new WatchKit app bundle identifier.
 
-## Transfer Data Using Watch Connectivity
-The Watch Connectivity framework provides APIs to do the following tasks:
-- Update application contexts.
-- Send messages.
-- Transfer user info and manage the outstanding transfers.
-- Transfer files, view transfer progress, and manage the outstanding transfers.
-- Update current complications from iOS apps.
+1. Verify that the bundle identifiers for the watchOS app and widget targets are based on the iOS app target's bundle identifier. For example, if the iOS app target uses `com.YourCompany.ProductName`, the watchOS app and widget targets must use `com.YourCompany.ProductName.watchkitapp` and `com.YourCompany.ProductName.watchkitapp.SimpleWatchWidget`, respectively. To check this, select each target and click its Signing & Capabilities tab.
 
-The APIs all accept a dictionary and transfer it between apps but have notable differences. [`updateApplicationContext(_:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/updateapplicationcontext(_:)) sends a dictionary, which is typically a piece of app conext data, to the counterpart app and replaces the existing data if any.
- [`transferUserInfo(_:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/transferuserinfo(_:)) transfers a dictionary as well, but it ensures that the delivery happens. If an app transfers multiple dictionaries in a short interval, the system queues them up and deliver them in the same order. 
- [`sendMessage(_:replyHandler:errorHandler:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/sendmessage(_:replyhandler:errorhandler:)) sends a dictionary immediately and can return an error if the sending fails. 
- 
- When sending a message, apps can optionally provide a reply handler for receiving the counterpart's response. The reply handle runs asynchronously on a background thread and should return quickly to avoid time out. Sending a message from a watchOS app wakes up its paired iOS app if it's reachable.
+2. In the Signing & Capabilities tab for each target, set the developer team to let Xcode automatically manage the provisioning profile. See [Assign a project to a team](https://help.apple.com/xcode/mac/current/#/dev23aab79b4) for details.
 
-## Update Active Complications from iOS apps
-To demonstrate current complication user information transfer, this sample provides a complication that shows a random number. Use these steps to activate the complication:
-1. Choose a Modular watch face on the watch.
-2. Press the watch face to show the customization screen, tap the Edit button, then swipe right to show the configuration screen. 
-3. Tap the tall body area, then rotate the digital crown to find the `SimpleWatchConnectivity` complication.
-4. Press the digital crown and tap the screen to go back and finish the configuration.
+3. In the Info tab of the `SimpleWatchConnectivity Watch App` target, change the value of the `WKCompanionAppBundleIdentifier` key to the iOS app target's bundle identifier.
 
-To update the complication from the iOS app, this sample calls `transferCurrentComplicationUserInfo` on the iOS side if the complication is active. The system allows 50 transfers of this kind per day, and apps can use [`remainingComplicationUserInfoTransfers`](https://developer.apple.com/documentation/watchconnectivity/wcsession/remainingcomplicationuserinfotransfers) to retrieve the number of remaining times.
+4. Replace the App Group container identifier `group.com.example.apple-samplecode.SimpleWatchConnectivity` with one specific to your team. The identifier occurs in the entitlements for the watchOS app and the widget, and in `WidgetSupport.swift`. See [Configuring App Groups](https://developer.apple.com/documentation/xcode/configuring-app-groups) for more details.
+
+## Transfer data with Watch Connectivity
+
+The Watch Connectivity framework provides APIs that accomplish the following tasks:
+- Updating app context data
+- Sending a message
+- Transferring user info and managing outstanding transfers
+- Transferring a file, observing the transfer progress, and managing outstanding transfers
+- Updating an active complication from the companion iOS app
+
+All APIs transfer a dictionary between the companion apps, with notable differences. [`updateApplicationContext(_:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/updateapplicationcontext(_:)) sends a dictionary that represents the current app context to the companion app. It overwrites the context data currently existing in the pipeline, if any. [`transferUserInfo(_:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/transferuserinfo(_:)) guarantees to deliver a dictionary. If an app performs another transfer before finishing the previous one, the system queues the transfers and delivers them in the order received. [`sendMessage(_:replyHandler:errorHandler:)`](https://developer.apple.com/documentation/watchconnectivity/wcsession/sendmessage(_:replyhandler:errorhandler:)) sends a dictionary immediately. If the method encounters an error, it returns the error via the error handler. 
+
+An app can provide a reply handler to receive a response from its companion app. The reply handler runs asynchronously on a background thread, and returns quickly to avoid timeout. Sending a message from a watchOS app wakes up its companion iOS app, if the companion is reachable.
+
+## Update an active complication from the companion iOS  app
+
+This sample provides a WidgetKit complication that shows a timestamp. To activate the complication:
+
+1. Choose a Modular watch face on the Apple Watch.
+2. Press the watch face to show the customization screen, tap the Edit button, and swipe right to show the configuration screen. 
+3. Tap the large rectangular area, rotate the digital crown to find `SimpleWatchConnectivity Watch App`, tap it, and then select the complication.
+4. Press the digital crown and tap the screen to finish the configuration.
+
+To update the complication, the iOS app in this sample calls [`transferCurrentComplicationUserInfo`](https://developer.apple.com/documentation/watchconnectivity/wcsession/transfercurrentcomplicationuserinfo(_:)) if the complication is active. The system allows 50 transfers of this kind per day. Apps can use [`remainingComplicationUserInfoTransfers`](https://developer.apple.com/documentation/watchconnectivity/wcsession/remainingcomplicationuserinfotransfers) to retrieve the number of remaining times.
 
 ``` swift
 if WCSession.default.isComplicationEnabled {
     let userInfoTranser = WCSession.default.transferCurrentComplicationUserInfo(userInfo)
 ```
 
-On the watch side, this sample calls `reloadTimeline` to update the complication.
+The watchOS app persists the data it receives to the shared `UserDefaults`, and calls [`reloadTimelines(ofKind:)`](https://developer.apple.com/documentation/widgetkit/widgetcenter/reloadtimelines(ofkind:)) for the system to reload the timelines for the widget:
 
 ``` swift
-let server = CLKComplicationServer.sharedInstance()
-if let complications = server.activeComplications {
-    for complication in complications {
-        // Call this method sparingly.
-        // Use extendTimeline(for:) instead when the timeline is still valid.
-        server.reloadTimeline(for: complication)
+WidgetCenter.shared.getCurrentConfigurations { result in
+    switch result {
+    case .success(let widgetInfoList):
+        for widgetInfo in widgetInfoList where widgetInfo.kind == WidgetSupport.widgetKind {
+            WidgetCenter.shared.reloadTimelines(ofKind: widgetInfo.kind)
+        }
+    case .failure(let error):
+        print(error.localizedDescription)
     }
 }
 ```
 
-## Handle Watch Connectivity Background Tasks
-Apps must complete `WKWatchConnectivityRefreshBackgroundTask`. Otherwise, tasks keep consuming the background executing time until time runs out of the budget and the app crashes. This sample retains the tasks in an array and complete them when:
+When the system requests the timeline, the widget retrieves the data from the shared `UserDefaults` and uses it to create and return a timeline entry:
 
+``` swift
+func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
+```
+
+    
+## Handle Watch Connectivity background tasks
+
+When using Watch Connectivity, apps must complete every background task ([`WKWatchConnectivityRefreshBackgroundTask`](https://developer.apple.com/documentation/watchkit/wkwatchconnectivityrefreshbackgroundtask)). An uncompleted task consumes the background-task time budget that watchOS allocates to the app, which results in a crash when the budget runs out.
+
+This sample retains the tasks in an array, and completes them when:
 - The app finishes handling the tasks.
 - The current `WCSession` turns to a state other than [`.activated`](https://developer.apple.com/documentation/watchconnectivity/wcsessionactivationstate/activated).
-- [`hasContentPending`](https://developer.apple.com/documentation/watchconnectivity/wcsession/hascontentpending) flips `false`, which indicates that there's no pending data (received prior to `WCSession` activation) waiting for processing.
+- [`hasContentPending`](https://developer.apple.com/documentation/watchconnectivity/wcsession/hascontentpending) becomes `false`, indicating that there's no pending data received prior to `WCSession` activation waiting for processing.
 
-The following code completes the tasks at the end of the [`handle(_:)`](https://developer.apple.com/documentation/watchkit/wkextensiondelegate/1650877-handle) method of the extension delegate.
+The following code completes the tasks at the end of [`handle(_:)`](https://developer.apple.com/documentation/watchkit/wkapplicationdelegate/3946541-handle):
 
 ``` swift
 func handle(_ backgroundTasks: Set<WKRefreshBackgroundTask>) {
@@ -77,7 +94,8 @@ func handle(_ backgroundTasks: Set<WKRefreshBackgroundTask>) {
 }
 ```
 
-The following code completes the tasks in the other cases.
+The following code completes the tasks in the other cases:
+
 ``` swift
 activationStateObservation = WCSession.default.observe(\.activationState) { _, _ in
     DispatchQueue.main.async {
@@ -91,4 +109,4 @@ hasContentPendingObservation = WCSession.default.observe(\.hasContentPending) { 
 }
 ```
 
-Debugging background tasks can be tricky because watchOS apps typically don't run for a long time. After users stop using an app and lower their wrist, watchOS suspends the app. When watchOS triggers a background task for an app, the app can be in the suspended state, so the system needs to wake it up (or launch it). Using Xcode to run an app prevents the system from proceeding with the suspending process, which leads to a discrepancy between the debugging environment and the final user environment. To avoid this discrepancy, debug the app by launching it directly from the home screen and analyzing the app logs. For debugging, this sample uses the [`Logger`](Shared/Logger.swift) class to write logs into a file and transfers it to the iOS app when users tap the file transfer button on the watch app.
+On watchOS, the system suspends an  app when a person stops using the app and lowers their wrist. Later, when watchOS triggers a background task for the app, watchOS wakes the app from the suspended state. Using Xcode to run an app prevents the system from completing the suspension process, and may lead to different app behaviors. When encountering an issue related to background tasks, consider debugging it by launching the app directly from the Home Screen and analyzing the app logs. This sample uses [`Logger`](Shared/Logger.swift) to write logs into a file, and transfers the file to the iOS app when a person taps the file transfer button in the watchOS app.

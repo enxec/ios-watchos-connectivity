@@ -7,10 +7,7 @@ Implements the WCSessionDelegate methods.
 
 import Foundation
 import WatchConnectivity
-
-#if os(watchOS)
-import ClockKit
-#endif
+import WidgetKit
 
 // Custom notifications happen when Watch Connectivity activation or reachability status changes,
 // or when receiving or sending data. Clients observe these notifications to update the UI.
@@ -82,24 +79,38 @@ class SessionDelegator: NSObject, WCSessionDelegate {
         var commandStatus = CommandStatus(command: .transferUserInfo, phrase: .received)
         commandStatus.timedColor = TimedColor(userInfo)
         
-        if let isComplicationInfo = userInfo[PayloadKey.isCurrentComplicationInfo] as? Bool,
-            isComplicationInfo == true {
-            
-            commandStatus.command = .transferCurrentComplicationUserInfo
-            
-            #if os(watchOS)
-            let server = CLKComplicationServer.sharedInstance()
-            if let complications = server.activeComplications {
-                for complication in complications {
-                    // Call this method sparingly.
-                    // Use extendTimeline(for:) instead when the timeline is still valid.
-                    server.reloadTimeline(for: complication)
+        guard let isComplicationInfo = userInfo[PayloadKey.isCurrentComplicationInfo] as? Bool,
+              isComplicationInfo == true else {
+            postNotificationOnMainQueueAsync(name: .dataDidFlow, object: commandStatus)
+            return
+        }
+                    
+        #if os(watchOS)
+        commandStatus.command = .transferCurrentComplicationUserInfo
+        
+        guard let sharedUserDefaults = UserDefaults(suiteName: WidgetSupport.appGroupContainer) else {
+            postNotificationOnMainQueueAsync(name: .dataDidFlow, object: commandStatus)
+            return
+        }
+        // Persist the data to the app group container.
+        //
+        sharedUserDefaults.setValue(commandStatus.timedColor?.timeStamp, forKey: WidgetSupport.UserDefaultsKey.timestamp)
+        sharedUserDefaults.setValue(commandStatus.timedColor?.colorData, forKey: WidgetSupport.UserDefaultsKey.colorData)
+        
+        // Reload the timeline of the widget, if necessary.
+        //
+        WidgetCenter.shared.getCurrentConfigurations { result in
+            switch result {
+            case .success(let widgetInfoList):
+                for widgetInfo in widgetInfoList where widgetInfo.kind == WidgetSupport.widgetKind {
+                    WidgetCenter.shared.reloadTimelines(ofKind: widgetInfo.kind)
                 }
+            case .failure(let error):
+                print(error.localizedDescription)
             }
-
-            #endif
         }
         postNotificationOnMainQueueAsync(name: .dataDidFlow, object: commandStatus)
+        #endif
     }
     
     // Did finish sending a piece of userInfo.
