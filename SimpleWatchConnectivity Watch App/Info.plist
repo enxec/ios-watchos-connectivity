@@ -28,6 +28,6 @@
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
-	<string>com.example.apple-samplecode.SimpleWatchConnectivity</string>
+	<string>com.nbyte.example.watchconnectivity</string>
 </dict>
 </plist>
